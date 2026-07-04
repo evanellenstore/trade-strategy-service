@@ -1,0 +1,17 @@
+server:
+  port: 3011
+
+spring:
+  application:
+    name: trade-strategy-service
+
+  datasource:
+    url: jdbc:mysql://host.docker.internal:3307/tradding_db
+    username: root
+    password: root
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    open-in-view: false
