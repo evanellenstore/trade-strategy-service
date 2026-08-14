@@ -6,12 +6,75 @@ spring:
     name: trade-strategy-service
 
   datasource:
-    url: jdbc:mysql://host.docker.internal:3307/tradding_db
+    url: jdbc:mysql://localhost:3306/tradding_db
     username: root
-    password: root
+    password: ellenverma
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
   jpa:
+    open-in-view: false
+    show-sql: false
     hibernate:
       ddl-auto: update
-    show-sql: true
-    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+  sql:
+    init:
+      mode: always
+
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: trade-strategy-service
+      auto-offset-reset: latest
+      enable-auto-commit: false
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "*"
+        spring.json.use.type.headers: false
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        acks: all
+        retries: 3
+        linger.ms: 10
+
+  main:
+    allow-bean-definition-overriding: true
+
+market:
+  kafka:
+    topics:
+      indicator: indicator.updated
+      pattern: pattern.detected
+      signal: signal.generated
+
+logging:
+  level:
+    root: INFO
+    org.springframework.kafka: INFO
+    com.trade.strategy: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+    prometheus:
+      enabled: true
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+
+strategy:
+  default-timeframe: ONE_MINUTE
+  default-priority: 100
