@@ -12,7 +12,7 @@ import com.trade.strategy.entity.StrategySignal;
 import com.trade.strategy.service.StrategySignalService;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/strategy")
 public class SignalController {
 
     private final StrategySignalService signalService;

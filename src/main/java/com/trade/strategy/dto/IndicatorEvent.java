@@ -20,4 +20,30 @@ public class IndicatorEvent {
     private Double atr;
     private Double price;
     private Instant timestamp;
+    
+    // ADX_DI indicators
+    private Double adxDIPlus;
+    private Double adxDIMinus;
+    
+    // BB_REVERSAL indicators
+    private Double bbUpper;
+    private Double bbMiddle;
+    private Double bbLower;
+    
+    // STOCHASTIC indicators
+    private Double stochK;
+    private Double stochD;
+    
+    // PIVOT_BREAKOUT indicators
+    private Double pivotPoint;
+    private Double pivotResistance1;
+    private Double pivotResistance2;
+    private Double pivotSupport1;
+    private Double pivotSupport2;
+    
+    // MFI indicator
+    private Double mfi;
+    
+    // CMF indicator
+    private Double cmf;
 }

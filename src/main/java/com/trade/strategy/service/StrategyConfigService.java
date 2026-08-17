@@ -99,4 +99,47 @@ public class StrategyConfigService {
         }
         return value.trim().toUpperCase();
     }
+
+    @Transactional
+    public StrategySummaryResponse createStrategy(StrategyConfig strategyConfig) {
+        String normalized = normalizeName(strategyConfig.getStrategyName());
+        StrategyConfig newConfig = new StrategyConfig();
+        newConfig.setStrategyName(normalized);
+        newConfig.setEnabled(strategyConfig.getEnabled() != null ? strategyConfig.getEnabled() : Boolean.FALSE);
+        newConfig.setTimeframe(strategyConfig.getTimeframe() != null ? strategyConfig.getTimeframe() : "1H");
+        newConfig.setPriority(strategyConfig.getPriority() != null ? strategyConfig.getPriority() : 1);
+        strategyConfigRepository.save(newConfig);
+        log.info("Created strategy {}", normalized);
+        return toSummary(newConfig);
+    }
+
+    @Transactional
+    public StrategySummaryResponse updateStrategy(String strategyName, StrategyConfig updates) {
+        String normalized = normalizeName(strategyName);
+        StrategyConfig config = strategyConfigRepository.findByStrategyName(normalized)
+                .orElseThrow(() -> new IllegalArgumentException("Strategy not found: " + strategyName));
+        
+        if (updates.getTimeframe() != null) {
+            config.setTimeframe(updates.getTimeframe());
+        }
+        if (updates.getPriority() != null) {
+            config.setPriority(updates.getPriority());
+        }
+        if (updates.getEnabled() != null) {
+            config.setEnabled(updates.getEnabled());
+        }
+        
+        strategyConfigRepository.save(config);
+        log.info("Updated strategy {}", normalized);
+        return toSummary(config);
+    }
+
+    @Transactional
+    public void deleteStrategy(String strategyName) {
+        String normalized = normalizeName(strategyName);
+        StrategyConfig config = strategyConfigRepository.findByStrategyName(normalized)
+                .orElseThrow(() -> new IllegalArgumentException("Strategy not found: " + strategyName));
+        strategyConfigRepository.delete(config);
+        log.info("Deleted strategy {}", normalized);
+    }
 }
