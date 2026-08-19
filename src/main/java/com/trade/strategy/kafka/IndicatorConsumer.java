@@ -6,18 +6,20 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import com.trade.strategy.dto.IndicatorEvent;
-import com.trade.strategy.dto.PatternEvent;
-import com.trade.strategy.service.StrategyEngine;
+import com.trade.strategy.service.PatternCacheService;
+import com.trade.strategy.service.SignalProcessingService;
 
 @Component
 public class IndicatorConsumer {
 
     private static final Logger log = LoggerFactory.getLogger(IndicatorConsumer.class);
 
-    private final StrategyEngine strategyEngine;
+    private final SignalProcessingService signalProcessingService;
+    private final PatternCacheService patternCache;
 
-    public IndicatorConsumer(StrategyEngine strategyEngine) {
-        this.strategyEngine = strategyEngine;
+    public IndicatorConsumer(SignalProcessingService signalProcessingService, PatternCacheService patternCache) {
+        this.signalProcessingService = signalProcessingService;
+        this.patternCache = patternCache;
     }
 
     @KafkaListener(topics = "${market.kafka.topics.indicator:indicator.updated}", groupId = "trade-strategy-service", containerFactory = "indicatorKafkaListenerContainerFactory")
@@ -26,7 +28,7 @@ public class IndicatorConsumer {
             if (event == null) {
                 return;
             }
-            strategyEngine.evaluate(event, new PatternEvent());
+            signalProcessingService.processSignal(event, patternCache.getLatestPattern(event.getSymbol()));
         } catch (Exception ex) {
             log.error("Failed to process indicator event for symbol {}", event != null ? event.getSymbol() : "UNKNOWN", ex);
         }

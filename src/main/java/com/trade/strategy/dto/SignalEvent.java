@@ -16,5 +16,6 @@ public class SignalEvent {
     private String signal;
     private Integer confidence;
     private Double price;
+    private String reason;
     private Instant timestamp;
 }

@@ -1,15 +1,13 @@
 package com.trade.strategy.service;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -31,13 +29,27 @@ public class SignalProcessingService {
 
     private static final Logger log = LoggerFactory.getLogger(SignalProcessingService.class);
 
-    private final List<TradingStrategy> strategies;
-    private final StrategyConfigRepository configRepository;
+    private final StrategyEngine strategyEngine;
     private final StrategySignalRepository signalRepository;
     private final PatternCacheService patternCacheService;
     private final SignalProducer signalProducer;
     private final SignalMapper signalMapper;
     private final MeterRegistry meterRegistry;
+
+    @Autowired
+    public SignalProcessingService(StrategyEngine strategyEngine,
+                                  StrategySignalRepository signalRepository,
+                                  PatternCacheService patternCacheService,
+                                  SignalProducer signalProducer,
+                                  SignalMapper signalMapper,
+                                  MeterRegistry meterRegistry) {
+        this.strategyEngine = strategyEngine;
+        this.signalRepository = signalRepository;
+        this.patternCacheService = patternCacheService;
+        this.signalProducer = signalProducer;
+        this.signalMapper = signalMapper;
+        this.meterRegistry = meterRegistry;
+    }
 
     public SignalProcessingService(List<TradingStrategy> strategies,
                                   StrategyConfigRepository configRepository,
@@ -46,13 +58,8 @@ public class SignalProcessingService {
                                   SignalProducer signalProducer,
                                   SignalMapper signalMapper,
                                   MeterRegistry meterRegistry) {
-        this.strategies = strategies;
-        this.configRepository = configRepository;
-        this.signalRepository = signalRepository;
-        this.patternCacheService = patternCacheService;
-        this.signalProducer = signalProducer;
-        this.signalMapper = signalMapper;
-        this.meterRegistry = meterRegistry;
+        this(new StrategyEngine(strategies, configRepository), signalRepository,
+                patternCacheService, signalProducer, signalMapper, meterRegistry);
     }
 
     @Transactional
@@ -63,30 +70,12 @@ public class SignalProcessingService {
 
         long start = System.nanoTime();
         try {
-            List<String> enabledStrategies = configRepository.findByEnabledTrue().stream()
-                    .map(config -> config.getStrategyName())
-                    .filter(Objects::nonNull)
-                    .toList();
-
-            List<SignalEvent> candidates = new ArrayList<>();
-            for (TradingStrategy strategy : strategies) {
-                if (!strategy.isEnabled()) {
-                    continue;
-                }
-                if (!enabledStrategies.isEmpty() && !enabledStrategies.contains(strategy.getName())) {
-                    continue;
-                }
-                Optional<SignalEvent> evaluated = strategy.evaluate(indicator, pattern);
-                evaluated.ifPresent(candidates::add);
-            }
-
-            if (candidates.isEmpty()) {
+            Optional<SignalEvent> evaluated = strategyEngine.evaluate(indicator, pattern);
+            if (evaluated.isEmpty()) {
                 return Optional.empty();
             }
 
-            SignalEvent winning = candidates.stream()
-                    .max(Comparator.comparingInt(SignalEvent::getConfidence))
-                    .orElseThrow();
+            SignalEvent winning = evaluated.get();
 
             winning.setSignalId(winning.getSignalId() == null ? "SIG-" + UUID.randomUUID() : winning.getSignalId());
             winning.setTimestamp(winning.getTimestamp() == null ? Instant.now() : winning.getTimestamp());
@@ -113,4 +102,5 @@ public class SignalProcessingService {
         }
         patternCacheService.addPattern(event.getSymbol(), event.getPatternName());
     }
+
 }

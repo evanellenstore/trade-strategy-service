@@ -22,29 +22,30 @@ public class StrategySignal {
     @Column(name = "signal_id", unique = true)
     private String signalId;
 
+    @Column(name = "symbol")
     private String symbol;
 
     @Column(name = "symbol_token")
     private String symbolToken;
 
+    @Column(name = "timeframe")
     private String timeframe;
 
     @Column(name = "strategy_name")
     private String strategyName;
 
-    @Column(name = "signal_text")
+    @Column(name = "`signal`")
     private String signal;
 
+    @Column(name = "confidence")
     private Double confidence;
 
-    @Column(name = "signal_price")
-    private Double signalPrice;
+    @Column(name = "reason")
+    private String reason;
 
-    @Column(name = "candle_time")
-    private Instant candleTime;
+    @Column(name = "price")
+    private Double price;
 
     @Column(name = "created_at")
     private Instant createdAt;
-
-    private String remarks;
 }

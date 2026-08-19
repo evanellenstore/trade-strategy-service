@@ -18,8 +18,8 @@ public class SignalMapper {
         s.setStrategyName(e.getStrategyName());
         s.setSignal(e.getSignal());
         s.setConfidence(e.getConfidence() != null ? e.getConfidence().doubleValue() : null);
-        s.setSignalPrice(e.getPrice());
-        s.setCandleTime(e.getTimestamp());
+        s.setReason(e.getReason());
+        s.setPrice(e.getPrice());
         s.setCreatedAt(Instant.now());
         return s;
     }

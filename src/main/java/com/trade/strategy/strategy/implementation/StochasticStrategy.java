@@ -14,57 +14,124 @@ import com.trade.strategy.strategy.TradingStrategy;
 /**
  * STOCHASTIC Trading Strategy.
  *
- * This strategy generates BUY or SELL signals using the Stochastic Oscillator (%K and %D)
- * to identify overbought/oversold conditions and crossovers.
+ * Generates BUY or SELL signals using the Stochastic Oscillator (%K and %D)
+ * to catch overbought/oversold extremes and momentum crossovers, confirmed
+ * by ADX trend strength.
  *
- * Strategy Flow:
+ * ┌────────────────────────────── WHY STOCHASTIC ────────────────────────────────────┐
+ * │ • %K = momentum position (0-100) within the recent trading range                 │
+ * │ • %K < 20         -> oversold -> reversal UP likely                              │
+ * │ • %K > %D         -> bullish crossover -> fast momentum above slow (BUY leg)     │
+ * │ • %K > 80         -> overbought -> reversal DOWN likely                          │
+ * │ • %K < %D         -> bearish crossover -> fast momentum below slow (SELL leg)    │
+ * │ • Each side is an OR of two conditions (extreme level OR crossover) -- either    │
+ * │   one alone is enough to trigger that side, see IMPORTANT note below             │
+ * └────────────────────────────────────────────────────────────────────────────────┘
  *
- *                    +------------------+
- *                    | Indicator Event  |
- *                    +--------+---------+
- *                             |
- *                             v
- *                  +-------------------+
- *                  | Check Stoch K & D |
- *                  +---------+---------+
- *                            |
- *             +--------------+--------------+
- *             |                             |
- *             v                             v
- *         K < 20 OR                     K > 80 OR
- *         K > D (Bullish)               K < D (Bearish)
- *             |                             |
- *             v                             v
- *           BUY                           SELL
- *             |                             |
- *             +-------------+---------------+
- *                           |
- *                           v
- *                Base Confidence = 60
- *                           |
- *                           v
- *              Trend Confirmation
- *             ADX > 25 (+20)
- *                           |
- *                           v
- *                Calculate Final Score
- *                     (Max = 100)
- *                           |
- *                           v
- *                 Generate SignalEvent
+ * ┌────────────────────────────── WHY ADX CONFIRMATION ──────────────────────────────┐
+ * │ • ADX > 25 confirms a trending environment exists                                │
+ * │ • Stochastic is a range/mean-reversion oscillator -- it can give false signals   │
+ * │   when the market is choppy or trendless                                         │
+ * │ • Optional: absent/weak ADX does NOT block the signal, only the +20             │
+ * └────────────────────────────────────────────────────────────────────────────────┘
  *
- * Confidence Scoring:
- * - BUY when %K < 20 (oversold) or %K > %D (bullish crossover): 60 points
- * - SELL when %K > 80 (overbought) or %K < %D (bearish crossover): 60 points
- * - ADX confirmation (ADX > 25) adds 20 points for trend strength
+ * ┌────────────────────────────── WHY NOT OTHER INDICATORS ──────────────────────────┐
+ * │ • RSI                     -> similar oscillator to Stochastic; would be redundant│
+ * │ • MACD                    -> better for trend-following than mean reversion      │
+ * │ • Bollinger Bands         -> similar goal but price-based, not range-based       │
+ * │ • Moving Averages         -> too slow for an overbought/oversold strategy        │
+ * │ • Raw price               -> needs %K/%D's range context to mean anything        │
+ * └────────────────────────────────────────────────────────────────────────────────┘
  *
- * Signal Generation:
- * - BUY when Stochastic %K drops below 20 (oversold condition)
- *   or when %K crosses above %D (bullish crossover)
- * - SELL when Stochastic %K rises above 80 (overbought condition)
- *   or when %K crosses below %D (bearish crossover)
- * - ADX > 25 confirms trend strength and adds confidence
- * - Confidence score is capped at 100
+ * ┌──────────────────────── IMPORTANT: BUY IS CHECKED FIRST ─────────────────────────┐
+ * │ The BUY condition (`stochK < 20 || stochK > stochD`) is evaluated in an          │
+ * │ if / else-if chain BEFORE the SELL condition. Because it's an OR, a case where   │
+ * │ %K is simultaneously > 80 (overbought) AND %K > %D (still crossed above %D)      │
+ * │ will match the BUY branch first and never reach the SELL check. In practice      │
+ * │ this means the crossover half of the OR can dominate the overbought/oversold     │
+ * │ half whenever both legs disagree on direction.                                   │
+ * └────────────────────────────────────────────────────────────────────────────────┘
+ *
+ * ┌─────────────────────────────────── INPUTS ───────────────────────────────────────┐
+ * │                                                                                    │
+ * │   IndicatorEvent  [DRIVES the signal]        PatternEvent  [IGNORED]              │
+ * │  ┌──────────────────────────┐               ┌──────────────────────────┐         │
+ * │  │ stochK      -- required  │               │ patternName  -- n/a      │         │
+ * │  │ stochD      -- required  │               │ (chart-pattern signals   │         │
+ * │  │ adx         -- optional, │               │  belong to pattern-based │         │
+ * │  │   +20 pts, direction-    │               │  strategies, or those    │         │
+ * │  │   agnostic               │               │  that explicitly add     │         │
+ * │  │ price                    │               │  pattern confirmation --  │         │
+ * │  │ symbol/symbolToken       │               │  not this one)           │         │
+ * │  │ timeframe                │               │                          │         │
+ * │  └──────────────────────────┘               └──────────────────────────┘         │
+ * │                                                                                    │
+ * │  STOCHASTIC is a pure indicator-driven strategy: it reacts only to %K/%D          │
+ * │  (+ optional ADX). The `pattern` argument is accepted to satisfy the              │
+ * │  TradingStrategy interface but is never read here.                                │
+ * └────────────────────────────────────────────────────────────────────────────────┘
+ *
+ * STRATEGY FLOW
+ * ═════════════
+ *
+ *              ┌─────────────────────┐        ┌─────────────────────┐
+ *              │   IndicatorEvent    │        │    PatternEvent      │
+ *              │  stochK, stochD,    │        │    (received,        │
+ *              │        adx          │        │      unused)         │
+ *              │  [ONLY input used]  │        │                      │
+ *              └──────────┬──────────┘        └──────────────────────┘
+ *                         │
+ *                         ▼
+ *              ┌───────────────────────────┐
+ *              │   Evaluate BUY condition   │   (checked first)
+ *              │  stochK < 20  OR           │
+ *              │  stochK > stochD           │
+ *              └──────────────┬─────────────┘
+ *                    true │        │ false
+ *                         ▼        ▼
+ *                  signal = BUY   ┌───────────────────────────┐
+ *                  confidence=60  │  Evaluate SELL condition   │
+ *                         │       │  stochK > 80  OR           │
+ *                         │       │  stochK < stochD           │
+ *                         │       └──────────────┬─────────────┘
+ *                         │             true │        │ false
+ *                         │                  ▼        ▼
+ *                         │           signal = SELL   signal stays HOLD
+ *                         │           confidence=60           │
+ *                         ▼                  ▼                │
+ *                  ┌────────────┐    ┌────────────┐            │
+ *                  │ ADX > 25 ? │    │ ADX > 25 ? │            │
+ *                  │(checked    │    │(checked    │            │
+ *                  │ only for   │    │ only for   │            │
+ *                  │ this leg)  │    │ this leg)  │            │
+ *                  └─────┬──────┘    └─────┬──────┘            │
+ *                  yes│      │no     yes│      │no             │
+ *                     ▼      │          ▼      │               │
+ *                confidence  │     confidence  │               │
+ *                +=20 (=80)  │     +=20 (=80)  │               │
+ *                     │      │          │      │               │
+ *                     └───┬──┘          └───┬──┘               │
+ *                         ▼                 ▼                  ▼
+ *                          confidence = min(confidence, 100)  return Optional.empty()
+ *                                     │                        (ADX check never
+ *                                     ▼                         reached here)
+ *                          build & return SignalEvent
+ *
+ * CONFIDENCE SCORING (max 100)
+ * ─────────────────────────────
+ *   Base Stochastic signal ... 60   (either direction, from IndicatorEvent)
+ *   ADX confirmation .......... +20  (ADX > 25, direction-agnostic)
+ *   Cap ........................ 100
+ *   Note: ADX confirmation is a bonus, not a requirement -- a plain
+ *   Stochastic signal alone still produces a 60-confidence signal.
+ *
+ * SIGNAL RULES
+ * ────────────
+ *   BUY  : stochK < 20 (oversold) OR stochK > stochD (bullish crossover)
+ *          -- checked FIRST; see IMPORTANT note above
+ *   SELL : stochK > 80 (overbought) OR stochK < stochD (bearish crossover)
+ *          -- only reached if the BUY condition above is false
+ *   HOLD : neither condition matches -> no signal emitted (Optional.empty())
  */
 @Component
 public class StochasticStrategy implements TradingStrategy {
@@ -88,20 +155,39 @@ public class StochasticStrategy implements TradingStrategy {
         String signal = "HOLD";
         int confidence = 0;
 
-        // BUY Signal: Oversold (%K < 20) or Bullish Crossover (%K > %D)
+        // STOCHASTIC OVERSOLD/CROSSOVER (Primary Momentum Signal - 60 points base)
+        // USED: %K < 20 = oversold (mean reversion up likely)
+        //       %K > %D = bullish crossover (fast momentum above slow)
+        // LOGIC: Dual conditions capture both extremes and momentum direction.
+        // NOTE: this OR is checked first -- if a bar is overbought (%K > 80)
+        // but %K is still above %D, it lands here as BUY, not in the SELL
+        // branch below (see IMPORTANT note in the class javadoc).
         if (indicator.getStochK() < 20 || indicator.getStochK() > indicator.getStochD()) {
             signal = "BUY";
             confidence = 60;
+
+            // ADX TREND STRENGTH CONFIRMATION (+20 points if valid)
+            // USED: ADX > 25 validates trend environment
+            // PREVENTS: Stochastic whipsaws in choppy range-bound markets
+            if (indicator.getAdx() != null && indicator.getAdx() > 25) {
+                confidence += 20;
+            }
         }
-        // SELL Signal: Overbought (%K > 80) or Bearish Crossover (%K < %D)
+        // STOCHASTIC OVERBOUGHT/CROSSOVER (Primary Momentum Signal - 60 points base)
+        // USED: %K > 80 = overbought (mean reversion down likely)
+        //       %K < %D = bearish crossover (fast momentum below slow)
+        // LOGIC: Dual conditions capture both extremes and momentum reversal.
+        // Only reached when the BUY condition above did not match.
         else if (indicator.getStochK() > 80 || indicator.getStochK() < indicator.getStochD()) {
             signal = "SELL";
             confidence = 60;
-        }
 
-        // ADX confirmation for trend strength
-        if (indicator.getAdx() != null && indicator.getAdx() > 25) {
-            confidence += 20;
+            // ADX TREND STRENGTH CONFIRMATION (+20 points if valid)
+            // USED: ADX > 25 validates trend environment
+            // PREVENTS: Stochastic whipsaws in choppy range-bound markets
+            if (indicator.getAdx() != null && indicator.getAdx() > 25) {
+                confidence += 20;
+            }
         }
 
         if ("HOLD".equals(signal)) {
@@ -117,6 +203,8 @@ public class StochasticStrategy implements TradingStrategy {
                 .signal(signal)
                 .confidence(Math.min(100, confidence))
                 .price(indicator.getPrice())
+                .reason("Stochastic crossover generated " + signal + ": %K=" + indicator.getStochK()
+                    + ", %D=" + indicator.getStochD())
                 .timestamp(Instant.now())
                 .build());
     }

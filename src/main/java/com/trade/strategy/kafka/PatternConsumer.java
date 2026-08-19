@@ -6,6 +6,7 @@ import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 
 import com.trade.strategy.dto.PatternDetectedEvent;
+import com.trade.strategy.dto.PatternEvent;
 import com.trade.strategy.service.PatternCacheService;
 
 @Component
@@ -25,7 +26,11 @@ public class PatternConsumer {
             if (event == null || event.getSymbol() == null || event.getPatternName() == null) {
                 return;
             }
-            cache.addPattern(event.getSymbol(), event.getPatternName());
+            cache.addPattern(PatternEvent.builder()
+                    .symbol(event.getSymbol())
+                    .patternName(event.getPatternName())
+                    .origin(event.getOrigin())
+                    .build());
         } catch (Exception ex) {
             log.error("Failed to process pattern event for symbol {}", event != null ? event.getSymbol() : "UNKNOWN", ex);
         }
