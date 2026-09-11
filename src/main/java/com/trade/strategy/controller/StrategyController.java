@@ -18,7 +18,7 @@ import com.trade.strategy.entity.StrategyConfig;
 import com.trade.strategy.service.StrategyConfigService;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/strategy")
 public class StrategyController {
 
     private final StrategyConfigService strategyConfigService;
