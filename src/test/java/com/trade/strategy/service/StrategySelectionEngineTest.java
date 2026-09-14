@@ -64,7 +64,7 @@ class StrategySelectionEngineTest {
 
         assertThat(result).isPresent();
         assertThat(result.get().getStrategyName()).isEqualTo("HIGH_PRIORITY");
-        assertThat(result.get().getConfidence()).isEqualTo(80);
+        assertThat(result.get().getConfidence()).isEqualTo(100);
     }
 
     private static StrategyConfig strategyConfig(String strategyName) {

@@ -2,6 +2,7 @@ package com.trade.strategy.service;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -49,12 +50,22 @@ public class PatternCacheService {
         });
     }
 
-    public PatternEvent getLatestPattern(String symbol) {
+    public PatternEvent getLatestPattern(String symbol, String timeframe, LocalDateTime candleTime) {
         List<PatternRecord> list = cache.get(symbol);
         if (list == null) return null;
         Instant now = Instant.now();
         list.removeIf(r -> r.ts.isBefore(now.minus(ttl)));
-        return list.isEmpty() ? null : list.get(list.size() - 1).event;
+        return list.stream()
+            .map(record -> record.event)
+            .filter(event -> timeframe == null || timeframe.equalsIgnoreCase(event.getTimeframe()))
+            .filter(event -> candleTime == null || event.getCandleTime() == null
+                || candleTime.equals(event.getCandleTime()))
+            .reduce((first, second) -> second)
+            .orElse(null);
+        }
+
+        public PatternEvent getLatestPattern(String symbol) {
+        return getLatestPattern(symbol, null, null);
     }
 
     public List<String> getRecentPatterns(String symbol) {

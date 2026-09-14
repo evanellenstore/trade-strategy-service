@@ -1,6 +1,7 @@
 package com.trade.strategy.dto;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 import lombok.Data;
 
@@ -15,11 +16,14 @@ public class IndicatorEvent {
     private Double adx;
     private Double macd;
     private Double macdSignal;
+    private Double macdPrevious;
+    private Double macdSignalPrevious;
     private Double vwap;
     private Double supertrend;
     private Double atr;
     private Double price;
     private Instant timestamp;
+    private LocalDateTime candleTime;
     
     // ADX_DI indicators
     private Double adxDIPlus;

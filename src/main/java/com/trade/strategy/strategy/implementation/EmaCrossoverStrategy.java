@@ -249,7 +249,7 @@ public class EmaCrossoverStrategy implements TradingStrategy {
                 .price(indicator.getPrice())
                 .reason("EMA crossover produced " + signal + ": EMA20=" + indicator.getEma20()
                     + ", EMA50=" + indicator.getEma50())
-                .timestamp(Instant.now())
+                .timestamp(indicator.getTimestamp() != null ? indicator.getTimestamp() : Instant.now())
                 .build());
     }
 }

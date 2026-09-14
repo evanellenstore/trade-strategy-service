@@ -146,6 +146,10 @@ public class RsiStrategy implements TradingStrategy {
         // USED: RSI < 30 indicates oversold condition (extreme selling = reversal up likely)
         // NOT USED alone: RSI can stay extreme for extended periods; needs trend confirmation
         if (indicator.getRsi14() < 30) {
+            if (indicator.getEma20() != null && indicator.getEma50() != null
+                    && indicator.getEma20() <= indicator.getEma50()) {
+                return Optional.empty();
+            }
             signal = "BUY";
             confidence = 80;
 
@@ -188,7 +192,7 @@ public class RsiStrategy implements TradingStrategy {
                     + (indicator.getAdx() != null && indicator.getAdx() > 25
                         ? " with ADX trend confirmation"
                         : " without ADX trend confirmation"))
-                .timestamp(Instant.now())
+                .timestamp(indicator.getTimestamp() != null ? indicator.getTimestamp() : Instant.now())
                 .build());
     }
 }

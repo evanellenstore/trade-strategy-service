@@ -1,6 +1,7 @@
 package com.trade.strategy.service;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -78,7 +79,13 @@ public class SignalProcessingService {
             SignalEvent winning = evaluated.get();
 
             winning.setSignalId(winning.getSignalId() == null ? "SIG-" + UUID.randomUUID() : winning.getSignalId());
-            winning.setTimestamp(winning.getTimestamp() == null ? Instant.now() : winning.getTimestamp());
+            if (indicator.getCandleTime() != null) {
+                winning.setTimestamp(indicator.getCandleTime().toInstant(ZoneOffset.UTC));
+            } else if (indicator.getTimestamp() != null) {
+                winning.setTimestamp(indicator.getTimestamp());
+            } else if (winning.getTimestamp() == null) {
+                winning.setTimestamp(Instant.now());
+            }
 
             StrategySignal entity = signalMapper.toEntity(winning);
             signalRepository.save(entity);

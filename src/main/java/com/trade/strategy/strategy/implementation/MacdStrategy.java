@@ -176,10 +176,13 @@ public class MacdStrategy implements TradingStrategy {
         // USED: MACD > Signal = bullish momentum crossover (fast line above slow)
         //       MACD < Signal = bearish momentum crossover (fast line below slow)
         // LOGIC: Crossovers signal momentum shift; early trend detection
-        if (indicator.getMacd() > indicator.getMacdSignal()) {
+        boolean hasPrevious = indicator.getMacdPrevious() != null && indicator.getMacdSignalPrevious() != null;
+        if (indicator.getMacd() > indicator.getMacdSignal()
+            && (!hasPrevious || indicator.getMacdPrevious() <= indicator.getMacdSignalPrevious())) {
             signal = "BUY";
             confidence += 60;
-        } else if (indicator.getMacd() < indicator.getMacdSignal()) {
+        } else if (indicator.getMacd() < indicator.getMacdSignal()
+            && (!hasPrevious || indicator.getMacdPrevious() >= indicator.getMacdSignalPrevious())) {
             signal = "SELL";
             confidence += 60;
         }
@@ -218,7 +221,7 @@ public class MacdStrategy implements TradingStrategy {
                 .price(indicator.getPrice())
                 .reason("MACD " + indicator.getMacd() + " is " + signal
                     + " relative to signal line " + indicator.getMacdSignal())
-                .timestamp(Instant.now())
+                .timestamp(indicator.getTimestamp() != null ? indicator.getTimestamp() : Instant.now())
                 .build());
     }
 }

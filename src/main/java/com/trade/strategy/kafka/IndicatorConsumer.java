@@ -28,7 +28,8 @@ public class IndicatorConsumer {
             if (event == null) {
                 return;
             }
-            signalProcessingService.processSignal(event, patternCache.getLatestPattern(event.getSymbol()));
+                signalProcessingService.processSignal(event,
+                        patternCache.getLatestPattern(event.getSymbol(), event.getTimeframe(), event.getCandleTime()));
         } catch (Exception ex) {
             log.error("Failed to process indicator event for symbol {}", event != null ? event.getSymbol() : "UNKNOWN", ex);
         }

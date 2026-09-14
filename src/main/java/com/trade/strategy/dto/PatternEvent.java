@@ -1,5 +1,7 @@
 package com.trade.strategy.dto;
 
+import java.time.LocalDateTime;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -14,6 +16,7 @@ public class PatternEvent {
     private String symbol;
     private String exchange;
     private String timeframe;
+    private LocalDateTime candleTime;
     private String patternName;
     private String origin;
     private double open;

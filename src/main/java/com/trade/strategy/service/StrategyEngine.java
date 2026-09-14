@@ -2,6 +2,8 @@ package com.trade.strategy.service;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.List;
 import java.util.Optional;
 
@@ -57,7 +59,29 @@ public class StrategyEngine {
                 return Optional.empty();
             }
 
-            SignalEvent selected = candidates.stream()
+                Map<String, List<SignalEvent>> byDirection = candidates.stream()
+                    .collect(Collectors.groupingBy(signal -> signal.getSignal().toUpperCase()));
+                Map.Entry<String, List<SignalEvent>> winningDirection = byDirection.entrySet().stream()
+                    .max(Comparator.comparingInt(entry -> entry.getValue().stream()
+                        .mapToInt(signal -> signal.getConfidence() == null ? 0 : signal.getConfidence())
+                        .sum()))
+                    .orElse(null);
+                if (winningDirection == null) {
+                return Optional.empty();
+                }
+                int winningScore = winningDirection.getValue().stream()
+                    .mapToInt(signal -> signal.getConfidence() == null ? 0 : signal.getConfidence())
+                    .sum();
+                boolean tied = byDirection.entrySet().stream()
+                    .filter(entry -> !entry.getKey().equals(winningDirection.getKey()))
+                    .anyMatch(entry -> entry.getValue().stream()
+                        .mapToInt(signal -> signal.getConfidence() == null ? 0 : signal.getConfidence())
+                        .sum() == winningScore);
+                if (tied) {
+                return Optional.empty();
+                }
+
+                SignalEvent selected = winningDirection.getValue().stream()
                     .sorted(Comparator
                             .comparingInt(SignalEvent::getConfidence).reversed()
                             .thenComparing(Comparator.comparingInt(
@@ -68,6 +92,12 @@ public class StrategyEngine {
             if (selected == null) {
                 return Optional.empty();
             }
+
+            selected.setConfidence(Math.min(100, winningScore));
+            selected.setReason("Aggregated " + winningDirection.getValue().size()
+                    + " " + winningDirection.getKey() + " strategy signals: "
+                    + winningDirection.getValue().stream().map(SignalEvent::getStrategyName)
+                    .collect(Collectors.joining(", ")));
 
             return Optional.of(selected);
         } catch (Exception ex) {

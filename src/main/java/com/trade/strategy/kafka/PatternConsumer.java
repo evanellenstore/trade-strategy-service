@@ -28,6 +28,8 @@ public class PatternConsumer {
             }
             cache.addPattern(PatternEvent.builder()
                     .symbol(event.getSymbol())
+                    .timeframe(event.getTimeframe())
+                    .candleTime(event.getCandleTime())
                     .patternName(event.getPatternName())
                     .origin(event.getOrigin())
                     .build());
