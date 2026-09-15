@@ -77,6 +77,7 @@ public class SignalProcessingService {
             }
 
             SignalEvent winning = evaluated.get();
+            winning.setCandles(indicator.getCandles());
 
             winning.setSignalId(winning.getSignalId() == null ? "SIG-" + UUID.randomUUID() : winning.getSignalId());
             if (indicator.getCandleTime() != null) {

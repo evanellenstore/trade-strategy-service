@@ -32,6 +32,7 @@ public class PatternConsumer {
                     .candleTime(event.getCandleTime())
                     .patternName(event.getPatternName())
                     .origin(event.getOrigin())
+                    .candles(event.getCandles())
                     .build());
         } catch (Exception ex) {
             log.error("Failed to process pattern event for symbol {}", event != null ? event.getSymbol() : "UNKNOWN", ex);

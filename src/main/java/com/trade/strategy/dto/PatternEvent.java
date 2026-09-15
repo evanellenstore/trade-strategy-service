@@ -6,6 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.util.List;
 
 @Data
 @Builder
@@ -26,4 +27,5 @@ public class PatternEvent {
     private double volume;
     private String startTime;
     private String endTime;
+    private List<CandleEvent> candles;
 }

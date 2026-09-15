@@ -4,6 +4,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 
 import lombok.Data;
+import java.util.List;
 
 @Data
 public class IndicatorEvent {
@@ -50,4 +51,5 @@ public class IndicatorEvent {
     
     // CMF indicator
     private Double cmf;
+    private List<CandleEvent> candles;
 }

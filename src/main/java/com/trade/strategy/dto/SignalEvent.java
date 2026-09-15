@@ -4,6 +4,7 @@ import java.time.Instant;
 
 import lombok.Builder;
 import lombok.Data;
+import java.util.List;
 
 @Data
 @Builder
@@ -18,4 +19,5 @@ public class SignalEvent {
     private Double price;
     private String reason;
     private Instant timestamp;
+    private List<CandleEvent> candles;
 }
